@@ -102,6 +102,58 @@ pipeline {
             }
         }
 
+        stage('Build Frontend') {
+            steps {
+                echo 'Building frontend...'
+                sh '''
+                    cd notesapp-frontend
+                    npm install
+                    npm run build
+                '''
+            }
+        }
+
+        stage('Build Frontend Docker Image') {
+            steps {
+                echo 'Building Frontend Docker image...'
+                sh """
+                    docker build -t ${DOCKER_REGISTRY}/notesapp-frontend:1.0.${BUILD_NUMBER} ./notesapp-frontend
+                    docker tag ${DOCKER_REGISTRY}/notesapp-frontend:1.0.${BUILD_NUMBER} ${DOCKER_REGISTRY}/notesapp-frontend:latest
+                """
+            }
+        }
+
+        stage('Push Frontend Docker Image to Nexus') {
+            steps {
+                echo 'Pushing Frontend Docker image to Nexus...'
+                withCredentials([usernamePassword(
+                    credentialsId: 'nexus-docker',
+                    usernameVariable: 'NEXUS_USER',
+                    passwordVariable: 'NEXUS_PASS'
+                )]) {
+                    sh '''
+                        echo $NEXUS_PASS | docker login ${DOCKER_REGISTRY} -u $NEXUS_USER --password-stdin
+                        docker push ${DOCKER_REGISTRY}/notesapp-frontend:1.0.${BUILD_NUMBER}
+                        docker push ${DOCKER_REGISTRY}/notesapp-frontend:latest
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy Frontend') {
+            steps {
+                echo 'Deploying Frontend...'
+                sh """
+                    docker rm -f notesapp-frontend || true
+                    docker run -d --name notesapp-frontend \
+                        --network notesapp_app-net \
+                        -p 3001:80 \
+                        ${DOCKER_REGISTRY}/notesapp-frontend:latest
+                    echo "Frontend deployed!"
+                """
+            }
+        }
+
         stage('Deploy Green') {
             steps {
                 echo 'Deploying to GREEN environment...'
