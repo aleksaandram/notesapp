@@ -37,7 +37,11 @@ pipeline {
         stage('Deploy to Nexus') {
             steps {
                 echo 'Deploying artifact to Nexus...'
-                sh 'mvn -Dmaven.wagon.http.retryHandler.count=3 -Dmaven.wagon.httpconnectionManager.ttlSeconds=120 deploy -s settings.xml -DskipTests'
+                sh '''
+                    curl -u admin:Kloi12345 \
+                    --upload-file target/${APP_NAME}-${APP_VERSION}.jar \
+                    http://nexus:8081/repository/maven-snapshots/org/example/${APP_NAME}/${APP_VERSION}/${APP_NAME}-${APP_VERSION}.jar
+                '''
             }
         }
 
