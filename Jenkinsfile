@@ -61,19 +61,28 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 echo 'Building Docker image...'
-                sh 'docker build -t ${APP_NAME}:${APP_VERSION} .'
+                sh """
+                        docker build -t localhost:8082/docker-hosted/notesapp:1.0.${BUILD_NUMBER} .
+
+                        docker tag localhost:8082/docker-hosted/notesapp:1.0.${BUILD_NUMBER} localhost:8082/docker-hosted/notesapp:latest
+                """
             }
         }
 
         stage('Deploy to Nexus') {
             steps {
                 echo 'Deploying artifact to Nexus...'
+                withCredentials([usernamePassword(
+                                    credentialsId: 'nexus-docker',
+                                    usernameVariable: 'NEXUS_USER',
+                                    passwordVariable: 'NEXUS_PASS'
+                                )]){
                 sh '''
-                    curl -u admin:Kloi12345 \
+                    curl -u admin:$NEXUS_PASS \
                     --upload-file target/${APP_NAME}-${APP_VERSION}.jar \
                     http://nexus:8081/repository/maven-snapshots/org/example/${APP_NAME}/${APP_VERSION}/${APP_NAME}-${APP_VERSION}.jar
                 '''
-            }
+            }}
         }
 
         stage('Push Docker Image to Nexus') {
@@ -86,8 +95,8 @@ pipeline {
                 )]) {
                     sh '''
                         echo $NEXUS_PASS | docker login host.docker.internal:8084 -u $NEXUS_USER --password-stdin
-                        docker tag ${APP_NAME}:${APP_VERSION} host.docker.internal:8084/${APP_NAME}:${APP_VERSION}
-                        docker push host.docker.internal:8084/${APP_NAME}:${APP_VERSION}
+                       docker push host.docker.internal:8084/notesapp:1.0.${BUILD_NUMBER}
+                       docker push host.docker.internal:8084/notesapp:latest
                     '''
                 }
             }
@@ -101,7 +110,7 @@ pipeline {
                    docker run -d --name app_green \
                        --network notesapp_app-net \
                        -p 8086:8080 \
-                       host.docker.internal:8084/${APP_NAME}:${APP_VERSION}
+                       host.docker.internal:8084/notesapp:latest
                    echo "Waiting for GREEN to start..."
                    sleep 15
                '''
@@ -112,7 +121,7 @@ pipeline {
            steps {
                echo 'Smoke testing GREEN...'
                sh '''
-                   STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8086/notes)
+                   STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8086/api/notes)
                    echo "GREEN status: $STATUS"
                    if [ "$STATUS" = "200" ] || [ "$STATUS" = "204" ]; then
                        echo "GREEN is healthy!"
@@ -136,20 +145,7 @@ pipeline {
                    }
                }
 
-               stage('Cleanup Blue') {
-                   steps {
-                       echo 'Stopping old BLUE environment...'
-                       sh '''
-                           docker rm -f app_blue || true
-                           docker run -d --name app_blue \
-                               --network notesapp_app-net \
-                               -p 8085:8080 \
-                               ${DOCKER_REGISTRY}/${APP_NAME}:${APP_VERSION}
-                           echo "BLUE updated and ready for next deployment!"
-                       '''
                    }
-               }
-    }
 
     post {
            success {
