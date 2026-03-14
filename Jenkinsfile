@@ -22,16 +22,15 @@ pipeline {
             }
         }
 
-         stage('Clean Maven Cache') {
-                    steps {
-                            sh 'rm -rf ~/.m2/repository/org/codehaus/plexus/plexus-utils'
-                    }
-                }
+
 
         stage('Build') {
             steps {
                 echo 'Building application...'
-                sh 'mvn clean package -DskipTests -o -s settings.xml -Dmaven.repo.local=/var/jenkins_home/.m2/repository'
+                sh '''
+                    find /var/jenkins_home/.m2/repository -name "_remote.repositories" -delete
+                    mvn clean package -DskipTests -o -s settings.xml -Dmaven.repo.local=/var/jenkins_home/.m2/repository
+                '''
             }
         }
 
