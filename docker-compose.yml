@@ -1,0 +1,59 @@
+services:
+  backend:
+    build: .
+    container_name: notesapp-backend
+    ports:
+      - "8080:8080"
+    networks:
+      - app-net
+
+  frontend:
+    build: ./notesapp-frontend
+    container_name: notesapp-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - app-net
+
+  gitea:
+    image: gitea/gitea:latest
+    container_name: gitea
+    ports:
+      - "3000:3000"
+      - "222:22"
+    volumes:
+      - gitea-data:/data
+    networks:
+      - app-net
+
+  jenkins:
+    image: jenkins/jenkins:lts
+    container_name: jenkins
+    ports:
+      - "8090:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins-data:/var/jenkins_home
+    networks:
+      - app-net
+
+  nexus:
+    image: sonatype/nexus3:latest
+    container_name: nexus
+    ports:
+      - "8081:8081"
+    volumes:
+      - nexus-data:/nexus-data
+    networks:
+      - app-net
+
+volumes:
+  gitea-data:
+  jenkins-data:
+  nexus-data:
+
+networks:
+  app-net:
+    driver: bridge
