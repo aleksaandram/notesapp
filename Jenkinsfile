@@ -19,7 +19,7 @@ pipeline {
         stage('Build') {
             steps {
                 echo 'Building application...'
-                sh './mvnw clean package -DskipTests -f pom.xml'
+                sh 'chmod +x mvnw && ./mvnw clean package -DskipTests -f pom.xml'
             }
         }
 
