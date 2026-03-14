@@ -102,23 +102,11 @@ pipeline {
             }
         }
 
-        stage('Build Frontend') {
-            steps {
-                echo 'Building frontend...'
-                sh '''
-                    cd notesapp-frontend
-                    npm install
-                    npm run build
-                '''
-            }
-        }
-
         stage('Build Frontend Docker Image') {
             steps {
                 echo 'Building Frontend Docker image...'
                 sh """
-                    docker build -t ${DOCKER_REGISTRY}/notesapp-frontend:1.0.${BUILD_NUMBER} ./notesapp-frontend
-                    docker tag ${DOCKER_REGISTRY}/notesapp-frontend:1.0.${BUILD_NUMBER} ${DOCKER_REGISTRY}/notesapp-frontend:latest
+                    docker build -t ${DOCKER_REGISTRY}/notesapp-frontend:latest ./notesapp-frontend
                 """
             }
         }
