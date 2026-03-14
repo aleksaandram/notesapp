@@ -84,14 +84,76 @@ pipeline {
                 '''
             }
         }
+
+       stage('Deploy Green') {
+                   steps {
+                       echo 'Deploying to GREEN environment...'
+                       sh '''
+                           docker rm -f app_green || true
+                           docker run -d --name app_green \
+                               --network notesapp_app-net \
+                               -p 8086:8080 \
+                               ${DOCKER_REGISTRY}/${APP_NAME}:${APP_VERSION}
+                           echo "Waiting for GREEN to start..."
+                           sleep 15
+                       '''
+                   }
+               }
+
+               stage('Smoke Test Green') {
+                   steps {
+                       echo 'Smoke testing GREEN...'
+                       sh '''
+                           STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://app_green:8080/notes)
+                           echo "GREEN status: $STATUS"
+                           if [ "$STATUS" = "200" ] || [ "$STATUS" = "204" ]; then
+                               echo "GREEN is healthy!"
+                           else
+                               echo "GREEN failed!"
+                               exit 1
+                           fi
+                       '''
+                   }
+               }
+
+               stage('Switch Traffic to Green') {
+                   steps {
+                       echo 'Switching traffic from BLUE to GREEN...'
+                       sh '''
+                           docker cp nginx/nginx-green.conf nginx_proxy:/etc/nginx/nginx.conf
+                           docker exec nginx_proxy nginx -t
+                           docker exec nginx_proxy nginx -s reload
+                           echo "Traffic switched to GREEN!"
+                       '''
+                   }
+               }
+
+               stage('Cleanup Blue') {
+                   steps {
+                       echo 'Stopping old BLUE environment...'
+                       sh '''
+                           docker rm -f app_blue || true
+                           docker run -d --name app_blue \
+                               --network notesapp_app-net \
+                               -p 8085:8080 \
+                               ${DOCKER_REGISTRY}/${APP_NAME}:${APP_VERSION}
+                           echo "BLUE updated and ready for next deployment!"
+                       '''
+                   }
+               }
     }
 
     post {
-        success {
-            echo 'Pipeline completed successfully!'
-        }
-        failure {
-            echo 'Pipeline failed!'
-        }
-    }
-}
+           success {
+               echo 'Blue-Green deployment completed successfully!'
+           }
+           failure {
+               echo 'Deployment failed! Rolling back to BLUE...'
+               sh '''
+                   docker cp nginx/nginx-blue.conf nginx_proxy:/etc/nginx/nginx.conf
+                   docker exec nginx_proxy nginx -s reload
+                   echo "Rolled back to BLUE!"
+               '''
+           }
+       }
+   }
