@@ -32,7 +32,7 @@ services:
     build: ./notesapp-frontend
     container_name: notesapp-frontend
     ports:
-      - "80:80"
+      - "3001:80"
     networks:
       - app-net
 
@@ -69,8 +69,8 @@ services:
     image: sonatype/nexus3:latest
     container_name: nexus
     ports:
-      - "8081:8081"
-      - "8082:8082"
+      - "8083:8081"
+      - "8084:8082"
     volumes:
       - nexus-data:/nexus-data
     networks:
