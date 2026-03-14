@@ -42,6 +42,7 @@ services:
     volumes:
       - jenkins-data:/var/jenkins_home
       - C:/Users/PC/.m2:/var/jenkins_home/.m2
+      - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - app-net
 
