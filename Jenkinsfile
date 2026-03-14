@@ -23,7 +23,7 @@ pipeline {
         stage('Build') {
             steps {
                 echo 'Building application...'
-                sh 'mvn clean package -DskipTests -s settings.xml'
+                sh 'mvn clean package -DskipTests -s settings.xml -Dmaven.repo.local=/var/jenkins_home/.m2/repository'
             }
         }
 
