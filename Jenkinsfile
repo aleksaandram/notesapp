@@ -80,9 +80,9 @@ pipeline {
             steps {
                 echo 'Pushing Docker image to Nexus...'
                 sh '''
-                    docker login nexus:8082 -u admin -p Kloi12345
-                    docker tag ${APP_NAME}:${APP_VERSION} nexus:8082/${APP_NAME}:${APP_VERSION}
-                    docker push nexus:8082/${APP_NAME}:${APP_VERSION}
+                    docker login host.docker.internal:8084 -u admin -p Kloi12345
+                    docker tag ${APP_NAME}:${APP_VERSION} host.docker.internal:8084/${APP_NAME}:${APP_VERSION}
+                    docker push host.docker.internal:8084/${APP_NAME}:${APP_VERSION}
                 '''
             }
         }
