@@ -148,7 +148,7 @@ pipeline {
 
         stage('Cleanup Blue') {
             steps {
-                echo 'Updating BLUE environment...'
+                echo 'Updating BLUE environment....'
                 sh """
                     docker rm -f app_blue || true
                     docker run -d --name app_blue \
