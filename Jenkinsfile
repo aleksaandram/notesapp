@@ -147,9 +147,30 @@ pipeline {
         }
 
         stage('Cleanup Blue') {
-            steps {
-                echo 'Updating BLUE environment....'
-                sh """
-                    docker rm -f app_blue || true
-                    docker run -d --name app_blue \
-                        --
+                   steps {
+                       echo 'Updating BLUE...'
+                       sh '''
+                           docker rm -f app_blue || true
+                           docker run -d --name app_blue \
+                               --network notesapp_app-net \
+                               -e COLOR=BLUE \
+                               -p 8085:8080 \
+                               ${DOCKER_REGISTRY}/${APP_NAME}:latest
+                       '''
+                   }
+               }
+           }
+
+           post {
+               success {
+                   echo 'Blue-Green deployment completed successfully!'
+               }
+               failure {
+                   echo 'Deployment failed! Rolling back to BLUE...'
+                   sh '''
+                       docker cp nginx/nginx-blue.conf nginx_proxy:/etc/nginx/nginx.conf
+                       docker exec nginx_proxy nginx -s reload
+                   '''
+               }
+           }
+       }
