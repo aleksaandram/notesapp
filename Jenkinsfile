@@ -159,14 +159,18 @@ pipeline {
             steps {
                 echo 'Smoke testing GREEN...'
                 sh '''
-                    STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8086/api/notes)
-                    echo "GREEN status: $STATUS"
-                    if [ "$STATUS" = "200" ] || [ "$STATUS" = "204" ]; then
-                        echo "GREEN is healthy!"
-                    else
-                        echo "GREEN failed with status: $STATUS"
-                        exit 1
-                    fi
+                    echo "Waiting for GREEN to be ready..."
+                    for i in $(seq 1 20); do
+                        STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8086/api/notes)
+                        echo "Attempt $i - GREEN status: $STATUS"
+                        if [ "$STATUS" = "200" ] || [ "$STATUS" = "204" ]; then
+                            echo "GREEN is healthy!"
+                            exit 0
+                        fi
+                        sleep 5
+                    done
+                    echo "GREEN failed health check after 20 attempts!"
+                    exit 1
                 '''
             }
         }
