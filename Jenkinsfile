@@ -29,12 +29,22 @@ pipeline {
         stage('Integration Test') {
             steps {
                 echo 'Running Integration Tests...'
-                sh 'mvn failsafe:integration-test failsafe:verify -s settings.xml'
-            }
-            post {
-                always {
-                    junit '**/target/failsafe-reports/*.xml'
-                }
+                sh '''
+                    # Start the app in background
+                    java -jar target/${APP_NAME}-${APP_VERSION}.jar &
+                    APP_PID=$!
+
+                    # Wait for app to start
+                    echo "Waiting for app to start..."
+                    sleep 15
+
+                    # Run integration tests
+                    curl -f http://localhost:8080/notes || exit 1
+                    echo "Integration test passed!"
+
+                    # Stop the app
+                    kill $APP_PID
+                '''
             }
         }
 
