@@ -171,7 +171,7 @@ pipeline {
             }
         }
 
-        sstage('Switch Traffic to Green') {
+        stage('Switch Traffic to Green') {
              steps {
                  echo 'Switching traffic to GREEN...'
                  sh '''
