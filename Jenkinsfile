@@ -22,21 +22,17 @@ pipeline {
             }
         }
 
-        stage('Build') {
-            steps {
-                echo 'Cleaning possible corrupted Maven cache...'
-                sh '''
-                    mkdir -p .m2/repository
-                    rm -rf .m2/repository/org/springframework/boot || true
-                '''
-
-                retry(3) {
-                    sh '''
-                        mvn $MAVEN_ARGS clean package -DskipTests
-                    '''
+         stage('Clean Maven Cache') {
+                    steps {
+                            sh 'rm -rf ~/.m2/repository/org/codehaus/plexus/plexus-utils'
+                    }
                 }
-            }
-        }
+
+        stage('Build') {
+                    steps {
+                        sh 'mvn -Dmaven.wagon.http.retryHandler.count=3 -Dmaven.wagon.httpconnectionManager.ttlSeconds=120 clean package -DskipTests'
+                    }
+                }
 
         stage('Integration Test') {
             steps {
