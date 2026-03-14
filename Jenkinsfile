@@ -37,7 +37,7 @@ pipeline {
         stage('Deploy to Nexus') {
             steps {
                 echo 'Deploying artifact to Nexus...'
-                sh 'mvn deploy -DskipTests -s settings.xml'
+                sh 'mvn -Dmaven.wagon.http.retryHandler.count=3 -Dmaven.wagon.httpconnectionManager.ttlSeconds=120 deploy -s settings.xml -DskipTests'
             }
         }
 
