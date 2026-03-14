@@ -149,7 +149,7 @@ pipeline {
                            -p 8086:8080 \
                            ${DOCKER_REGISTRY}/${APP_NAME}:latest
                        echo "Waiting for GREEN to start..."
-                       sleep 15
+                       sleep 30
                    """
                }
            }
