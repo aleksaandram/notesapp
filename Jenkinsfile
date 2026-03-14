@@ -10,6 +10,8 @@ pipeline {
         APP_NAME = 'notesapp'
         APP_VERSION = '0.0.1-SNAPSHOT'
         DOCKER_REGISTRY = 'host.docker.internal:8084'
+        MAVEN_OPTS = '-Dhttps.protocols=TLSv1.2 -Dmaven.wagon.http.pool=false -Dmaven.wagon.http.retryHandler.count=3'
+        MAVEN_ARGS = '-Dmaven.repo.local=.m2/repository -B -U'
     }
 
     stages {
@@ -21,10 +23,20 @@ pipeline {
         }
 
         stage('Build') {
-                    steps {
-                        sh 'mvn -Dmaven.wagon.http.retryHandler.count=3 -Dmaven.wagon.httpconnectionManager.ttlSeconds=120 clean package -DskipTests'
-                    }
+            steps {
+                echo 'Cleaning possible corrupted Maven cache...'
+                sh '''
+                    mkdir -p .m2/repository
+                    rm -rf .m2/repository/org/springframework/boot || true
+                '''
+
+                retry(3) {
+                    sh '''
+                        mvn $MAVEN_ARGS clean package -DskipTests
+                    '''
                 }
+            }
+        }
 
         stage('Integration Test') {
             steps {
@@ -33,7 +45,7 @@ pipeline {
                     java -jar target/${APP_NAME}-${APP_VERSION}.jar --server.port=8888 &
                     APP_PID=$!
                     echo "Waiting for app to start..."
-                    sleep 15
+                    sleep 20
 
                     STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8888/api/notes)
                     echo "Notes endpoint status: $STATUS"
@@ -85,11 +97,11 @@ pipeline {
                     usernameVariable: 'NEXUS_USER',
                     passwordVariable: 'NEXUS_PASS'
                 )]) {
-                    sh '''
-                        echo $NEXUS_PASS | docker login ${DOCKER_REGISTRY} -u $NEXUS_USER --password-stdin
+                    sh """
+                        echo \$NEXUS_PASS | docker login ${DOCKER_REGISTRY} -u \$NEXUS_USER --password-stdin
                         docker push ${DOCKER_REGISTRY}/${APP_NAME}:1.0.${BUILD_NUMBER}
                         docker push ${DOCKER_REGISTRY}/${APP_NAME}:latest
-                    '''
+                    """
                 }
             }
         }
@@ -97,7 +109,7 @@ pipeline {
         stage('Deploy Green') {
             steps {
                 echo 'Deploying to GREEN environment...'
-                sh '''
+                sh """
                     docker rm -f app_green || true
                     docker run -d --name app_green \
                         --network notesapp_app-net \
@@ -106,7 +118,7 @@ pipeline {
                         ${DOCKER_REGISTRY}/${APP_NAME}:latest
                     echo "Waiting for GREEN to start..."
                     sleep 15
-                '''
+                """
             }
         }
 
@@ -141,30 +153,7 @@ pipeline {
         stage('Cleanup Blue') {
             steps {
                 echo 'Updating BLUE environment...'
-                sh '''
+                sh """
                     docker rm -f app_blue || true
                     docker run -d --name app_blue \
-                        --network notesapp_app-net \
-                        -e COLOR=BLUE \
-                        -p 8085:8080 \
-                        ${DOCKER_REGISTRY}/${APP_NAME}:latest
-                    echo "BLUE updated!"
-                '''
-            }
-        }
-    }
-
-    post {
-        success {
-            echo 'Blue-Green deployment completed successfully!'
-        }
-        failure {
-            echo 'Deployment failed! Rolling back to BLUE...'
-            sh '''
-                docker cp nginx/nginx-blue.conf nginx_proxy:/etc/nginx/nginx.conf
-                docker exec nginx_proxy nginx -s reload
-                echo "Rolled back to BLUE!"
-            '''
-        }
-    }
-}
+                        --
