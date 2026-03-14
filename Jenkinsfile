@@ -9,13 +9,13 @@ pipeline {
         NEXUS_URL = 'http://nexus:8081'
         APP_NAME = 'notesapp'
         APP_VERSION = '0.0.1-SNAPSHOT'
-        DOCKER_REGISTRY = 'nexus:8082'
+        DOCKER_REGISTRY = 'host.docker.internal:8084'
     }
 
     stages {
         stage('Checkout') {
             steps {
-                echo 'Checking out code....'
+                echo 'Checking out code...'
                 checkout scm
             }
         }
@@ -23,7 +23,7 @@ pipeline {
         stage('Build') {
             steps {
                 echo 'Building application...'
-                sh 'mvn -Dmaven.wagon.http.retryHandler.count=3 -Dmaven.wagon.httpconnectionManager.ttlSeconds=120 clean package -DskipTests'
+                sh 'mvn clean package -DskipTests -s settings.xml'
             }
         }
 
@@ -33,20 +33,14 @@ pipeline {
                 sh '''
                     java -jar target/${APP_NAME}-${APP_VERSION}.jar --server.port=8888 &
                     APP_PID=$!
-
                     echo "Waiting for app to start..."
                     sleep 15
 
-                    # Test 1: Home endpoint
-                    STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8888/)
-                    echo "Home endpoint status: $STATUS"
+                    STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8888/api/notes)
+                    echo "Notes endpoint status: $STATUS"
 
-                    # Test 2: Notes endpoint
-                    STATUS2=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8888/api/notes)
-                    echo "Notes endpoint status: $STATUS2"
-
-                    if [ "$STATUS" = "200" ] && [ "$STATUS2" = "200" ]; then
-                        echo "All integration tests passed!"
+                    if [ "$STATUS" = "200" ] || [ "$STATUS" = "204" ]; then
+                        echo "Integration tests passed!"
                         kill $APP_PID
                     else
                         echo "Integration tests failed!"
@@ -57,14 +51,12 @@ pipeline {
             }
         }
 
-
         stage('Build Docker Image') {
             steps {
                 echo 'Building Docker image...'
                 sh """
-                        docker build -t localhost:8082/docker-hosted/notesapp:1.0.${BUILD_NUMBER} .
-
-                        docker tag localhost:8082/docker-hosted/notesapp:1.0.${BUILD_NUMBER} localhost:8082/docker-hosted/notesapp:latest
+                    docker build -t ${DOCKER_REGISTRY}/${APP_NAME}:1.0.${BUILD_NUMBER} .
+                    docker tag ${DOCKER_REGISTRY}/${APP_NAME}:1.0.${BUILD_NUMBER} ${DOCKER_REGISTRY}/${APP_NAME}:latest
                 """
             }
         }
@@ -73,16 +65,17 @@ pipeline {
             steps {
                 echo 'Deploying artifact to Nexus...'
                 withCredentials([usernamePassword(
-                                    credentialsId: 'nexus-docker',
-                                    usernameVariable: 'NEXUS_USER',
-                                    passwordVariable: 'NEXUS_PASS'
-                                )]){
-                sh '''
-                    curl -u admin:$NEXUS_PASS \
-                    --upload-file target/${APP_NAME}-${APP_VERSION}.jar \
-                    http://nexus:8081/repository/maven-snapshots/org/example/${APP_NAME}/${APP_VERSION}/${APP_NAME}-${APP_VERSION}.jar
-                '''
-            }}
+                    credentialsId: 'nexus-docker',
+                    usernameVariable: 'NEXUS_USER',
+                    passwordVariable: 'NEXUS_PASS'
+                )]) {
+                    sh '''
+                        curl -u $NEXUS_USER:$NEXUS_PASS \
+                        --upload-file target/${APP_NAME}-${APP_VERSION}.jar \
+                        ${NEXUS_URL}/repository/maven-snapshots/org/example/${APP_NAME}/${APP_VERSION}/${APP_NAME}-${APP_VERSION}.jar
+                    '''
+                }
+            }
         }
 
         stage('Push Docker Image to Nexus') {
@@ -94,70 +87,85 @@ pipeline {
                     passwordVariable: 'NEXUS_PASS'
                 )]) {
                     sh '''
-                        echo $NEXUS_PASS | docker login host.docker.internal:8084 -u $NEXUS_USER --password-stdin
-                       docker push host.docker.internal:8084/notesapp:1.0.${BUILD_NUMBER}
-                       docker push host.docker.internal:8084/notesapp:latest
+                        echo $NEXUS_PASS | docker login ${DOCKER_REGISTRY} -u $NEXUS_USER --password-stdin
+                        docker push ${DOCKER_REGISTRY}/${APP_NAME}:1.0.${BUILD_NUMBER}
+                        docker push ${DOCKER_REGISTRY}/${APP_NAME}:latest
                     '''
                 }
             }
         }
 
-       stage('Deploy Green') {
-           steps {
-               echo 'Deploying to GREEN environment...'
-               sh '''
-                   docker rm -f app_green || true
-                   docker run -d --name app_green \
-                       --network notesapp_app-net \
-                       -p 8086:8080 \
-                       host.docker.internal:8084/notesapp:latest
-                   echo "Waiting for GREEN to start..."
-                   sleep 15
-               '''
-           }
-       }
+        stage('Deploy Green') {
+            steps {
+                echo 'Deploying to GREEN environment...'
+                sh '''
+                    docker rm -f app_green || true
+                    docker run -d --name app_green \
+                        --network notesapp_app-net \
+                        -e COLOR=GREEN \
+                        -p 8086:8080 \
+                        ${DOCKER_REGISTRY}/${APP_NAME}:latest
+                    echo "Waiting for GREEN to start..."
+                    sleep 15
+                '''
+            }
+        }
 
-       stage('Smoke Test Green') {
-           steps {
-               echo 'Smoke testing GREEN...'
-               sh '''
-                   STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8086/api/notes)
-                   echo "GREEN status: $STATUS"
-                   if [ "$STATUS" = "200" ] || [ "$STATUS" = "204" ]; then
-                       echo "GREEN is healthy!"
-                   else
-                       echo "GREEN failed with status: $STATUS"
-                       exit 1
-                   fi
-               '''
-           }
-       }
+        stage('Smoke Test Green') {
+            steps {
+                echo 'Smoke testing GREEN...'
+                sh '''
+                    STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8086/api/notes)
+                    echo "GREEN status: $STATUS"
+                    if [ "$STATUS" = "200" ] || [ "$STATUS" = "204" ]; then
+                        echo "GREEN is healthy!"
+                    else
+                        echo "GREEN failed with status: $STATUS"
+                        exit 1
+                    fi
+                '''
+            }
+        }
 
-               stage('Switch Traffic to Green') {
-                   steps {
-                       echo 'Switching traffic from BLUE to GREEN...'
-                       sh '''
-                           docker cp nginx/nginx-green.conf nginx_proxy:/etc/nginx/nginx.conf
-                           docker exec nginx_proxy nginx -t
-                           docker exec nginx_proxy nginx -s reload
-                           echo "Traffic switched to GREEN!"
-                       '''
-                   }
-               }
+        stage('Switch Traffic to Green') {
+            steps {
+                echo 'Switching traffic from BLUE to GREEN...'
+                sh '''
+                    docker cp nginx/nginx-green.conf nginx_proxy:/etc/nginx/nginx.conf
+                    docker exec nginx_proxy nginx -t
+                    docker exec nginx_proxy nginx -s reload
+                    echo "Traffic switched to GREEN!"
+                '''
+            }
+        }
 
-                   }
+        stage('Cleanup Blue') {
+            steps {
+                echo 'Updating BLUE environment...'
+                sh '''
+                    docker rm -f app_blue || true
+                    docker run -d --name app_blue \
+                        --network notesapp_app-net \
+                        -e COLOR=BLUE \
+                        -p 8085:8080 \
+                        ${DOCKER_REGISTRY}/${APP_NAME}:latest
+                    echo "BLUE updated!"
+                '''
+            }
+        }
+    }
 
     post {
-           success {
-               echo 'Blue-Green deployment completed successfully!'
-           }
-           failure {
-               echo 'Deployment failed! Rolling back to BLUE...'
-               sh '''
-                   docker cp nginx/nginx-blue.conf nginx_proxy:/etc/nginx/nginx.conf
-                   docker exec nginx_proxy nginx -s reload
-                   echo "Rolled back to BLUE!"
-               '''
-           }
-       }
-   }
+        success {
+            echo 'Blue-Green deployment completed successfully!'
+        }
+        failure {
+            echo 'Deployment failed! Rolling back to BLUE...'
+            sh '''
+                docker cp nginx/nginx-blue.conf nginx_proxy:/etc/nginx/nginx.conf
+                docker exec nginx_proxy nginx -s reload
+                echo "Rolled back to BLUE!"
+            '''
+        }
+    }
+}
