@@ -26,6 +26,18 @@ pipeline {
             }
         }
 
+        stage('Integration Test') {
+            steps {
+                echo 'Running Integration Tests...'
+                sh 'mvn failsafe:integration-test failsafe:verify -s settings.xml'
+            }
+            post {
+                always {
+                    junit '**/target/failsafe-reports/*.xml'
+                }
+            }
+        }
+
 
         stage('Build Docker Image') {
             steps {
