@@ -6,9 +6,10 @@ pipeline {
     }
 
     environment {
-        NEXUS_URL = 'http://nexus:8083'
+        NEXUS_URL = 'http://nexus:8081'
         APP_NAME = 'notesapp'
         APP_VERSION = '0.0.1-SNAPSHOT'
+        DOCKER_REGISTRY = 'localhost:8082'
     }
 
     stages {
@@ -70,7 +71,7 @@ pipeline {
                 sh '''
                     curl -u admin:Kloi12345 \
                     --upload-file target/${APP_NAME}-${APP_VERSION}.jar \
-                    http://nexus:8083/repository/maven-snapshots/org/example/${APP_NAME}/${APP_VERSION}/${APP_NAME}-${APP_VERSION}.jar
+                    http://nexus:8081/repository/maven-snapshots/org/example/${APP_NAME}/${APP_VERSION}/${APP_NAME}-${APP_VERSION}.jar
                 '''
             }
         }
