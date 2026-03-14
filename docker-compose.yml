@@ -37,10 +37,11 @@ services:
       - "8090:8080"
       - "50000:50000"
     environment:
-      - JAVA_OPTS=-Dhttps.protocols=TLSv1.2,TLSv1.3 -Djavax.net.ssl.trustStoreType=WINDOWS-ROOT -Dhudson.model.DownloadService.noSignatureCheck=true
-      - MAVEN_OPTS=-Dhttps.protocols=TLSv1.2,TLSv1.3 -Djavax.net.ssl.trustStoreType=WINDOWS-ROOT
+      - JAVA_OPTS=-Dhttps.protocols=TLSv1.2,TLSv1.3 -Dhudson.model.DownloadService.noSignatureCheck=true
+      - MAVEN_OPTS=-Dhttps.protocols=TLSv1.2,TLSv1.3
     volumes:
       - jenkins-data:/var/jenkins_home
+      - C:/Users/PC/.m2:/var/jenkins_home/.m2
     networks:
       - app-net
 
