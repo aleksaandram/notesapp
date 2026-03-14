@@ -157,22 +157,23 @@ pipeline {
 
 
         stage('Smoke Test Green') {
-                   steps {
-                     sh '''
-                       echo "Smoke testing GREEN at http://app_green:8080 ..."
-                       for i in $(seq 1 15); do
-                         if curl -fsS --max-time 2 http://app_green:8080/api/notes > /dev/null; then
-                           echo "GREEN is healthy!"
-                           exit 0
-                         fi
-                         echo "Waiting for GREEN... ($i/15)"
-                         sleep 2
-                       done
-                       echo "GREEN failed health check!"
-                       exit 1
-                     '''
-                   }
-                 }
+            steps {
+                sh '''
+                    echo "Smoke testing GREEN..."
+                    for i in $(seq 1 20); do
+                        STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://host.docker.internal:8086/api/notes)
+                        echo "Attempt $i - Status: $STATUS"
+                        if [ "$STATUS" = "200" ] || [ "$STATUS" = "204" ]; then
+                            echo "GREEN is healthy!"
+                            exit 0
+                        fi
+                        sleep 5
+                    done
+                    echo "GREEN failed!"
+                    exit 1
+                '''
+            }
+        }
 
         stage('Switch Traffic to Green') {
              steps {
