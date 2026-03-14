@@ -131,21 +131,29 @@ pipeline {
 
 
 
-        stage('Deploy Green') {
-            steps {
-                echo 'Deploying to GREEN environment...'
-                sh """
-                    docker rm -f app_green || true
-                    docker run -d --name app_green \
-                        --network notesapp_app-net \
-                        -e COLOR=GREEN \
-                        -p 8086:8080 \
-                        ${DOCKER_REGISTRY}/${APP_NAME}:latest
-                    echo "Waiting for GREEN to start..."
-                    sleep 15
-                """
-            }
-        }
+       stage('Deploy Green') {
+           steps {
+               echo 'Deploying to GREEN environment...'
+               withCredentials([usernamePassword(
+                   credentialsId: 'nexus-docker',
+                   usernameVariable: 'NEXUS_USER',
+                   passwordVariable: 'NEXUS_PASS'
+               )]) {
+                   sh """
+                       echo \$NEXUS_PASS | docker login ${DOCKER_REGISTRY} -u \$NEXUS_USER --password-stdin
+                       docker pull ${DOCKER_REGISTRY}/${APP_NAME}:latest
+                       docker rm -f app_green || true
+                       docker run -d --name app_green \
+                           --network notesapp_app-net \
+                           -e COLOR=GREEN \
+                           -p 8086:8080 \
+                           ${DOCKER_REGISTRY}/${APP_NAME}:latest
+                       echo "Waiting for GREEN to start..."
+                       sleep 15
+                   """
+               }
+           }
+       }
 
         stage('Smoke Test Green') {
             steps {
@@ -163,17 +171,16 @@ pipeline {
             }
         }
 
-        stage('Switch Traffic to Green') {
-            steps {
-                echo 'Switching traffic from BLUE to GREEN...'
-                sh '''
-                    docker cp nginx/nginx-green.conf nginx_proxy:/etc/nginx/nginx.conf
-                    docker exec nginx_proxy nginx -t
-                    docker exec nginx_proxy nginx -s reload
-                    echo "Traffic switched to GREEN!"
-                '''
-            }
-        }
+        sstage('Switch Traffic to Green') {
+             steps {
+                 echo 'Switching traffic to GREEN...'
+                 sh '''
+                     docker exec nginx_proxy sh -c "echo 'upstream app { server app_green:8080; } server { listen 80; location / { proxy_pass http://app; } }' > /etc/nginx/conf.d/default.conf"
+                     docker exec nginx_proxy nginx -s reload
+                     echo "Traffic switched to GREEN!"
+                 '''
+             }
+         }
 
         stage('Cleanup Blue') {
                    steps {
@@ -195,10 +202,10 @@ pipeline {
                    echo 'Blue-Green deployment completed successfully!'
                }
                failure {
-                   echo 'Deployment failed! Rolling back to BLUE...'
+                   echo 'Rolling back to BLUE...'
                    sh '''
-                       docker cp nginx/nginx-blue.conf nginx_proxy:/etc/nginx/nginx.conf
-                       docker exec nginx_proxy nginx -s reload
+                       docker exec nginx_proxy sh -c "echo 'upstream app { server app_blue:8080; } server { listen 80; location / { proxy_pass http://app; } }' > /etc/nginx/conf.d/default.conf"
+                       docker exec nginx_proxy nginx -s reload || true
                    '''
                }
            }
