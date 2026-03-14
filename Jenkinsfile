@@ -106,7 +106,8 @@ pipeline {
             steps {
                 echo 'Building Frontend Docker image...'
                 sh """
-                    docker build -t ${DOCKER_REGISTRY}/notesapp-frontend:latest ./notesapp-frontend
+                docker build -t ${DOCKER_REGISTRY}/notesapp-frontend:1.0.${BUILD_NUMBER} .
+                docker tag ${DOCKER_REGISTRY}/notesapp-frontend:1.0.${BUILD_NUMBER} ${DOCKER_REGISTRY}/notesapp-frontend:latest
                 """
             }
         }
@@ -128,19 +129,7 @@ pipeline {
             }
         }
 
-        stage('Deploy Frontend') {
-            steps {
-                echo 'Deploying Frontend...'
-                sh """
-                    docker rm -f notesapp-frontend || true
-                    docker run -d --name notesapp-frontend \
-                        --network notesapp_app-net \
-                        -p 3001:80 \
-                        ${DOCKER_REGISTRY}/notesapp-frontend:latest
-                    echo "Frontend deployed!"
-                """
-            }
-        }
+
 
         stage('Deploy Green') {
             steps {
