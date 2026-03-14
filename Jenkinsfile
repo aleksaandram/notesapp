@@ -108,21 +108,21 @@ pipeline {
            }
        }
 
-               stage('Smoke Test Green') {
-                   steps {
-                       echo 'Smoke testing GREEN...'
-                       sh '''
-                           STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://app_green:8080/notes)
-                           echo "GREEN status: $STATUS"
-                           if [ "$STATUS" = "200" ] || [ "$STATUS" = "204" ]; then
-                               echo "GREEN is healthy!"
-                           else
-                               echo "GREEN failed!"
-                               exit 1
-                           fi
-                       '''
-                   }
-               }
+       stage('Smoke Test Green') {
+           steps {
+               echo 'Smoke testing GREEN...'
+               sh '''
+                   STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8086/notes)
+                   echo "GREEN status: $STATUS"
+                   if [ "$STATUS" = "200" ] || [ "$STATUS" = "204" ]; then
+                       echo "GREEN is healthy!"
+                   else
+                       echo "GREEN failed with status: $STATUS"
+                       exit 1
+                   fi
+               '''
+           }
+       }
 
                stage('Switch Traffic to Green') {
                    steps {
