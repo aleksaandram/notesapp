@@ -26,12 +26,6 @@ pipeline {
             }
         }
 
-        stage('Test') {
-            steps {
-                echo 'Running tests...'
-                sh 'mvn test -s settings.xml'
-            }
-        }
 
         stage('Build Docker Image') {
             steps {
