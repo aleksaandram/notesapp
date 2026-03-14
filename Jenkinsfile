@@ -1,9 +1,12 @@
 pipeline {
     agent any
 
+    tools {
+        maven 'maven'
+    }
+
     environment {
         NEXUS_URL = 'http://nexus:8081'
-        NEXUS_REPO = 'maven-releases'
         APP_NAME = 'notesapp'
         APP_VERSION = '0.0.1-SNAPSHOT'
     }
@@ -11,7 +14,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                echo 'Checking out code from Gitea...'
+                echo 'Checking out code...'
                 checkout scm
             }
         }
@@ -19,14 +22,14 @@ pipeline {
         stage('Build') {
             steps {
                 echo 'Building application...'
-                sh 'chmod +x mvnw && ./mvnw clean package -DskipTests -f pom.xml'
+                sh 'mvn clean package -DskipTests -s settings.xml'
             }
         }
 
         stage('Test') {
             steps {
                 echo 'Running tests...'
-                sh './mvnw test -f pom.xml'
+                sh 'mvn test -s settings.xml'
             }
         }
 
@@ -37,6 +40,13 @@ pipeline {
             }
         }
 
+        stage('Deploy to Nexus') {
+            steps {
+                echo 'Deploying artifact to Nexus...'
+                sh 'mvn deploy -DskipTests -s settings.xml'
+            }
+        }
+
         stage('Push Docker Image to Nexus') {
             steps {
                 echo 'Pushing Docker image to Nexus...'
@@ -44,13 +54,6 @@ pipeline {
                     docker login localhost:8082 -u admin -p Kloi12345
                     docker push localhost:8082/${APP_NAME}:${APP_VERSION}
                 '''
-            }
-        }
-
-        stage('Deploy') {
-            steps {
-                echo 'Deploying application...'
-                sh 'docker compose up -d --force-recreate backend frontend'
             }
         }
     }
