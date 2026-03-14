@@ -29,13 +29,11 @@ pipeline {
                 }
 
         stage('Build') {
-                    steps {
-                       sh 'mvn -Dmaven.wagon.http.retryHandler.count=3 \
-                               -Dmaven.wagon.http.ssl.insecure=true \
-                               -Dmaven.wagon.http.ssl.allowall=true \
-                               clean package -DskipTests'
-                    }
-                }
+            steps {
+                echo 'Building application...'
+                sh 'mvn clean package -DskipTests -o -s settings.xml -Dmaven.repo.local=/var/jenkins_home/.m2/repository'
+            }
+        }
 
         stage('Integration Test') {
             steps {
