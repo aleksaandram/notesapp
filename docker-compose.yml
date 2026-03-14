@@ -58,6 +58,7 @@ services:
     environment:
       - JAVA_OPTS=-Dhttps.protocols=TLSv1.2,TLSv1.3 -Dhudson.model.DownloadService.noSignatureCheck=true
       - MAVEN_OPTS=-Dhttps.protocols=TLSv1.2,TLSv1.3
+    user: root
     volumes:
       - jenkins-data:/var/jenkins_home
       - C:/Users/PC/.m2:/var/jenkins_home/.m2
