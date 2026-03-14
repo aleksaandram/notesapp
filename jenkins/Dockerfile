@@ -17,7 +17,10 @@ RUN apt-get update && \
 
 # Configure insecure registry for Docker
 RUN mkdir -p /etc/docker && \
-    echo '{"insecure-registries": ["localhost:8082"]}' > /etc/docker/daemon.json \
+    echo '{"insecure-registries": ["localhost:8082"]}' > /etc/docker/daemon.json
+
+# Add jenkins user to docker group
+RUN groupadd -f docker && usermod -aG docker jenkins
 
 ENV JAVA_HOME=/opt/java/openjdk
 ENV PATH=$JAVA_HOME/bin:$PATH

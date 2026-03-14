@@ -79,28 +79,34 @@ pipeline {
         stage('Push Docker Image to Nexus') {
             steps {
                 echo 'Pushing Docker image to Nexus...'
-                sh '''
-                    docker login host.docker.internal:8084 -u admin -p Kloi12345
-                    docker tag ${APP_NAME}:${APP_VERSION} host.docker.internal:8084/${APP_NAME}:${APP_VERSION}
-                    docker push host.docker.internal:8084/${APP_NAME}:${APP_VERSION}
-                '''
+                withCredentials([usernamePassword(
+                    credentialsId: 'nexus-docker',
+                    usernameVariable: 'NEXUS_USER',
+                    passwordVariable: 'NEXUS_PASS'
+                )]) {
+                    sh '''
+                        echo $NEXUS_PASS | docker login host.docker.internal:8084 -u $NEXUS_USER --password-stdin
+                        docker tag ${APP_NAME}:${APP_VERSION} host.docker.internal:8084/${APP_NAME}:${APP_VERSION}
+                        docker push host.docker.internal:8084/${APP_NAME}:${APP_VERSION}
+                    '''
+                }
             }
         }
 
        stage('Deploy Green') {
-                   steps {
-                       echo 'Deploying to GREEN environment...'
-                       sh '''
-                           docker rm -f app_green || true
-                           docker run -d --name app_green \
-                               --network notesapp_app-net \
-                               -p 8086:8080 \
-                               ${DOCKER_REGISTRY}/${APP_NAME}:${APP_VERSION}
-                           echo "Waiting for GREEN to start..."
-                           sleep 15
-                       '''
-                   }
-               }
+           steps {
+               echo 'Deploying to GREEN environment...'
+               sh '''
+                   docker rm -f app_green || true
+                   docker run -d --name app_green \
+                       --network notesapp_app-net \
+                       -p 8086:8080 \
+                       host.docker.internal:8084/${APP_NAME}:${APP_VERSION}
+                   echo "Waiting for GREEN to start..."
+                   sleep 15
+               '''
+           }
+       }
 
                stage('Smoke Test Green') {
                    steps {
