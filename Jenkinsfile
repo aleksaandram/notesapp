@@ -30,7 +30,10 @@ pipeline {
 
         stage('Build') {
                     steps {
-                        sh 'mvn -Dmaven.wagon.http.retryHandler.count=3 -Dmaven.wagon.httpconnectionManager.ttlSeconds=120 clean package -DskipTests'
+                       sh 'mvn -Dmaven.wagon.http.retryHandler.count=3 \
+                               -Dmaven.wagon.http.ssl.insecure=true \
+                               -Dmaven.wagon.http.ssl.allowall=true \
+                               clean package -DskipTests'
                     }
                 }
 
