@@ -21,11 +21,10 @@ pipeline {
         }
 
         stage('Build') {
-            steps {
-                echo 'Building application...'
-                sh 'mvn clean package -DskipTests -o -s settings.xml -Dmaven.repo.local=/var/jenkins_home/.m2/repository'
-            }
-        }
+                    steps {
+                        sh 'mvn -Dmaven.wagon.http.retryHandler.count=3 -Dmaven.wagon.httpconnectionManager.ttlSeconds=120 clean package -DskipTests'
+                    }
+                }
 
         stage('Integration Test') {
             steps {
