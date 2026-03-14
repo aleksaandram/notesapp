@@ -30,8 +30,8 @@ pipeline {
             steps {
                 echo 'Running Integration Tests...'
                 sh '''
-                    # Start the app in background
-                    java -jar target/${APP_NAME}-${APP_VERSION}.jar &
+                    # Start the app on different port in background
+                    java -jar target/${APP_NAME}-${APP_VERSION}.jar --server.port=8888 &
                     APP_PID=$!
 
                     # Wait for app to start
@@ -39,8 +39,16 @@ pipeline {
                     sleep 15
 
                     # Run integration tests
-                    curl -f http://localhost:8080/notes || exit 1
-                    echo "Integration test passed!"
+                    STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8888/notes)
+                    echo "Response status: $STATUS"
+
+                    if [ "$STATUS" = "200" ] || [ "$STATUS" = "204" ]; then
+                        echo "Integration test passed!"
+                    else
+                        echo "Integration test failed with status: $STATUS"
+                        kill $APP_PID
+                        exit 1
+                    fi
 
                     # Stop the app
                     kill $APP_PID
