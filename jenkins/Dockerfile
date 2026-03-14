@@ -15,6 +15,10 @@ RUN apt-get update && \
     apt-get install -y docker-ce-cli && \
     apt-get clean
 
+# Configure insecure registry for Docker
+RUN mkdir -p /etc/docker && \
+    echo '{"insecure-registries": ["localhost:8082"]}' > /etc/docker/daemon.json \
+
 ENV JAVA_HOME=/opt/java/openjdk
 ENV PATH=$JAVA_HOME/bin:$PATH
 ENV JAVA_OPTS="-Dhttps.protocols=TLSv1.2,TLSv1.3 -Dhudson.model.DownloadService.noSignatureCheck=true"

@@ -9,7 +9,7 @@ pipeline {
         NEXUS_URL = 'http://nexus:8081'
         APP_NAME = 'notesapp'
         APP_VERSION = '0.0.1-SNAPSHOT'
-        DOCKER_REGISTRY = 'localhost:8082'
+        DOCKER_REGISTRY = 'nexus:8082'
     }
 
     stages {
@@ -61,7 +61,7 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 echo 'Building Docker image...'
-                sh 'docker build -t localhost:8082/${APP_NAME}:${APP_VERSION} .'
+                sh 'docker build -t ${APP_NAME}:${APP_VERSION} .'
             }
         }
 
@@ -80,8 +80,9 @@ pipeline {
             steps {
                 echo 'Pushing Docker image to Nexus...'
                 sh '''
-                    docker login localhost:8082 -u admin -p Kloi12345
-                    docker push localhost:8082/${APP_NAME}:${APP_VERSION}
+                    docker login nexus:8082 -u admin -p Kloi12345
+                    docker tag ${APP_NAME}:${APP_VERSION} nexus:8082/${APP_NAME}:${APP_VERSION}
+                    docker push nexus:8082/${APP_NAME}:${APP_VERSION}
                 '''
             }
         }
