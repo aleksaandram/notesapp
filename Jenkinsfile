@@ -153,6 +153,24 @@ pipeline {
            }
        }
 
+       stage('Debug Green') {
+           steps {
+               sh '''
+                   echo "=== APP_GREEN STATUS ==="
+                   docker ps -a --filter "name=app_green"
+
+                   echo "=== APP_GREEN NETWORK ==="
+                   docker inspect app_green --format "{{json .NetworkSettings.Networks}}"
+
+                   echo "=== APP_GREEN LOGS ==="
+                   docker logs --tail 50 app_green || true
+
+                   echo "=== CURL FROM JENKINS TO GREEN ==="
+                   curl -i -H "Host: localhost" http://app_green:8080/ || true
+               '''
+           }
+       }
+
 
      stage('Smoke Test Green') {
        steps {
