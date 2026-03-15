@@ -62,8 +62,8 @@ pipeline {
             steps {
                 echo 'Building Docker image...'
                 sh """
-                    docker build -t ${DOCKER_REGISTRY}/${APP_NAME}:1.0.${BUILD_NUMBER} .
-                    docker tag ${DOCKER_REGISTRY}/${APP_NAME}:1.0.${BUILD_NUMBER} ${DOCKER_REGISTRY}/${APP_NAME}:latest
+                    docker build -t localhost:8082/docker-hosted/notesapp:1.0.${BUILD_NUMBER} .
+                    docker tag localhost:8082/docker-hosted/notesapp:1.0.${BUILD_NUMBER} localhost:8082/docker-hosted/notesapp:latest
                 """
             }
         }
@@ -94,9 +94,9 @@ pipeline {
                     passwordVariable: 'NEXUS_PASS'
                 )]) {
                     sh """
-                        echo \$NEXUS_PASS | docker login ${DOCKER_REGISTRY} -u \$NEXUS_USER --password-stdin
-                        docker push ${DOCKER_REGISTRY}/${APP_NAME}:1.0.${BUILD_NUMBER}
-                        docker push ${DOCKER_REGISTRY}/${APP_NAME}:latest
+                        docker login localhost:8082 -u $NEXUS_USER -p $NEXUS_PASS
+                        docker push localhost:8082/docker-hosted/notesapp:1.0.${BUILD_NUMBER}
+                        docker push localhost:8082/docker-hosted/notesapp:latest
                     """
                 }
             }
@@ -106,8 +106,8 @@ pipeline {
             steps {
                 echo 'Building Frontend Docker image...'
                 sh """
-                docker build -t ${DOCKER_REGISTRY}/notesapp-frontend:1.0.${BUILD_NUMBER} .
-                docker tag ${DOCKER_REGISTRY}/notesapp-frontend:1.0.${BUILD_NUMBER} ${DOCKER_REGISTRY}/notesapp-frontend:latest
+                docker build -t localhost:8082/docker-hosted/notesapp-frontend:1.0.${BUILD_NUMBER} .
+                docker tag localhost:8082/docker-hosted/notesapp-frontend:1.0.${BUILD_NUMBER} localhost:8082/docker-hosted/notesapp-frontend:latest
                 """
             }
         }
@@ -121,9 +121,9 @@ pipeline {
                     passwordVariable: 'NEXUS_PASS'
                 )]) {
                     sh '''
-                        echo $NEXUS_PASS | docker login ${DOCKER_REGISTRY} -u $NEXUS_USER --password-stdin
-                        docker push ${DOCKER_REGISTRY}/notesapp-frontend:1.0.${BUILD_NUMBER}
-                        docker push ${DOCKER_REGISTRY}/notesapp-frontend:latest
+                        docker login localhost:8082 -u $NEXUS_USER -p $NEXUS_PASS
+                        docker push localhost:8082/docker-hosted/notesapp-frontend:1.0.${BUILD_NUMBER}
+                        docker push localhost:8082/docker-hosted/notesapp-frontend:latest
                     '''
                 }
             }
