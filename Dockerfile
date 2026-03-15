@@ -1,9 +1,5 @@
-FROM eclipse-temurin:21-jre
-
+FROM node:20-alpine
 WORKDIR /app
-
 COPY target/*.jar app.jar
-
 EXPOSE 8080
-
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["sh", "-c", "apk add --no-cache openjdk21-jre && java -jar app.jar"]

@@ -58,6 +58,8 @@ pipeline {
             }
         }
 
+
+
         stage('Build Docker Image') {
             steps {
                 echo 'Building Docker image...'
@@ -147,7 +149,7 @@ pipeline {
                            -e COLOR=GREEN \
                            localhost:8082/docker-hosted/notesapp:latest
                        echo "Waiting for GREEN to start..."
-                       sleep 30
+                       sleep 60
                    """
                }
            }
@@ -176,12 +178,12 @@ pipeline {
        steps {
          sh '''
            echo "Smoke testing GREEN at http://app_green:8080 ..."
-           for i in $(seq 1 15); do
+           for i in $(seq 1 30); do
              if curl -fsS --max-time 2 -H "Host: localhost" http://app_green:8080/ > /dev/null; then
                echo "GREEN is healthy!"
                exit 0
              fi
-             echo "Waiting for GREEN... ($i/15)"
+             echo "Waiting for GREEN... ($i/30)
              sleep 2
            done
            echo "GREEN failed health check!"
