@@ -17,8 +17,8 @@ function App() {
 
   useEffect(() => {
     fetchNotes()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-
   const addNote = async () => {
     if (!text.trim()) return
 
