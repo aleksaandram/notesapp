@@ -140,7 +140,6 @@ pipeline {
                    passwordVariable: 'NEXUS_PASS'
                )]) {
                    sh """
-                       echo \$NEXUS_PASS | docker login ${DOCKER_REGISTRY} -u \$NEXUS_USER --password-stdin
                        docker pull localhost:8082/docker-hosted/notesapp:latest
                        docker rm -f app_green || true
                        docker run -d --name app_green \\
