@@ -133,23 +133,24 @@ pipeline {
 
 
 
-       stage('Deploy Green') {
-           steps {
-               echo 'Deploying to GREEN environment...'
-               withCredentials([usernamePassword(
-                   credentialsId: 'nexus-docker',
-                   usernameVariable: 'NEXUS_USER',
-                   passwordVariable: 'NEXUS_PASS'
-               )]) {
-                   sh """
-                       docker pull localhost:8082/docker-hosted/notesapp:latest
-                       docker-compose up -d --force-recreate --no-deps app-green
-                       echo "Waiting for GREEN to start.."
-                       sleep 60
-                   """
-               }
-           }
-       }
+     stage('Deploy Green') {
+                steps {
+                    echo 'Deploying to GREEN environment...'
+                    withCredentials([usernamePassword(
+                        credentialsId: 'nexus-docker',
+                        usernameVariable: 'NEXUS_USER',
+                        passwordVariable: 'NEXUS_PASS'
+                    )]) {
+                        sh """
+                            docker pull localhost:8082/docker-hosted/notesapp:latest
+                            docker compose -p notesapp up -d --force-recreate --no-deps app-green
+                            echo "Waiting for GREEN to start.."
+                            sleep 60
+                        """
+                    }
+                }
+            }
+
 
        stage('Debug Green') {
            steps {

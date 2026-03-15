@@ -146,48 +146,5 @@ jobs:
           cache-to: type=gha,mode=max
 
   # ─────────────────────────────────────────────────────────────────────────────
-  # JOB 4: Deploy на PROD — БАРА РАЧНО ОДОБРУВАЊЕ
-  # Постави во: Settings → Environments → prod → Required reviewers
+  # JOB 4: Deploy na prod -- to do - nemam server
   # ─────────────────────────────────────────────────────────────────────────────
-  deploy-prod:
-    name: 🏭 Deploy to PROD
-    runs-on: ubuntu-latest
-    needs: push-images
-    if: github.event_name == 'push'
-
-    environment:
-      name: prod
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Deploy to PROD server via SSH
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.PROD_HOST }}
-          username: ${{ secrets.PROD_USER }}
-          key: ${{ secrets.PROD_SSH_KEY }}
-          script: |
-            export GITHUB_REPOSITORY_OWNER=${{ github.repository_owner }}
-            export IMAGE_TAG=latest
-            export SPRING_PROFILE=prod
-
-            echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-
-            docker compose -f docker-compose.github.yml pull
-            docker compose -f docker-compose.github.yml up -d
-
-            echo "⏳ Cekam backend..."
-            sleep 20
-
-            curl --fail http://localhost:8080/actuator/health || exit 1
-            echo "✅ PROD deploy uspesen!"
-
-      - name: Notify success
-        if: success()
-        run: echo "🎉 Production deploy завршен! Commit ${{ github.sha }} од ${{ github.actor }}"
-
-      - name: Notify failure
-        if: failure()
-        run: echo "❌ Production deploy НЕУСПЕШЕН! Commit ${{ github.sha }}"
