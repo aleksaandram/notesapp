@@ -179,7 +179,7 @@ pipeline {
              sh '''
                  echo "Smoke testing GREEN at http://app_green:8080 ..."
                  for i in $(seq 1 30); do
-                   if curl -fsS --max-time 2 -H "Host: localhost" http://app_green:8080/ > /dev/null; then
+                   if curl -fsS --max-time 2 -H "Host: localhost" http://app_green:9999/ > /dev/null; then
                      echo "GREEN is healthy!"
                      exit 0
                    fi
