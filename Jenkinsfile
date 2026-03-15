@@ -179,12 +179,12 @@ pipeline {
              sh '''
                  echo "Smoke testing GREEN at http://app_green:8080 ..."
                  for i in $(seq 1 30); do
-                   if curl -fsS --max-time 2 -H "Host: localhost" http://app_green:9999/ > /dev/null; then
+                   if curl -fsS --max-time 2 -H "Host: localhost" http://app_green:8080/ > /dev/null; then
                      echo "GREEN is healthy!"
                      exit 0
                    fi
                    echo "Waiting for GREEN... ($i/30)"
-                   sleep 10
+                   sleep 2
                  done
                  echo "GREEN failed health check!"
                  exit 1
@@ -218,7 +218,6 @@ pipeline {
                   echo 'Something failed. Check the logs.'
                   sh '''
                       echo "ROLLBACK -> switching traffic back to BLUE"
-                      docker start nginx_proxy || true
                       docker exec nginx_proxy sh -lc "cp /etc/nginx/nginx-blue.conf /etc/nginx/conf.d/default.conf" || true
                       docker exec nginx_proxy nginx -s reload || true
                   '''
