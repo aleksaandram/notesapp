@@ -143,11 +143,7 @@ pipeline {
                )]) {
                    sh """
                        docker pull localhost:8082/docker-hosted/notesapp:latest
-                       docker rm -f app_green || true
-                       docker run -d --name app_green \\
-                           --network notesapp_app-net \\
-                           -e COLOR=GREEN \
-                           localhost:8082/docker-hosted/notesapp:latest
+                       docker-compose up -d --force-recreate --no-deps app-green
                        echo "Waiting for GREEN to start..."
                        sleep 60
                    """
