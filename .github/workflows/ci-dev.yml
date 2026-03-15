@@ -1,0 +1,183 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# CI/CD — DEV workflow
+# se aktivira so push na develop granka
+# Прави: build → test → push слики на GHCR → deploy на DEV
+# ═══════════════════════════════════════════════════════════════════════════════
+
+name: CI/CD — Dev
+
+on:
+  push:
+    branches:
+      - develop
+  pull_request:
+    branches:
+      - develop
+
+env:
+  REGISTRY: ghcr.io
+  BACKEND_IMAGE: ghcr.io/${{ github.repository_owner }}/notesapp-backend
+  FRONTEND_IMAGE: ghcr.io/${{ github.repository_owner }}/notesapp-frontend
+
+jobs:
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # JOB 1: Build + Test Backend
+  # ─────────────────────────────────────────────────────────────────────────────
+  build-test-backend:
+    name: Build & Test Backend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Run Maven tests
+        run: mvn clean test -B
+
+      - name: Build JAR
+        run: mvn package -DskipTests -B
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # JOB 2: Build + Test Frontend
+  # ─────────────────────────────────────────────────────────────────────────────
+  build-test-frontend:
+    name: Build & Test Frontend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: notesapp-frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: notesapp-frontend
+        run: npm ci
+
+      - name: Lint
+        working-directory: notesapp-frontend
+        run: npm run lint
+
+      - name: Build
+        working-directory: notesapp-frontend
+        run: npm run build
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # JOB 3: Build Docker слики и Push на GHCR
+  # Се извршува само на push, не на PR
+  # ─────────────────────────────────────────────────────────────────────────────
+  push-images:
+    name: Build & Push Docker Images
+    runs-on: ubuntu-latest
+    needs: [build-test-backend, build-test-frontend]
+    if: github.event_name == 'push'
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Extract metadata for Backend
+        id: meta-backend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.BACKEND_IMAGE }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix=dev-
+
+      - name: Extract metadata for Frontend
+        id: meta-frontend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.FRONTEND_IMAGE }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix=dev-
+
+      - name: Build & Push Backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.github
+          push: true
+          tags: ${{ steps.meta-backend.outputs.tags }}
+          labels: ${{ steps.meta-backend.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build & Push Frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./notesapp-frontend
+          file: ./notesapp-frontend/Dockerfile.github
+          push: true
+          tags: ${{ steps.meta-frontend.outputs.tags }}
+          labels: ${{ steps.meta-frontend.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # JOB 4: Deploy на DEV — автоматски, без одобрување
+  # ─────────────────────────────────────────────────────────────────────────────
+  deploy-dev:
+    name: Deploy to DEV
+    runs-on: ubuntu-latest
+    needs: push-images
+    if: github.event_name == 'push'
+
+    environment:
+      name: dev
+      url: http://${{ secrets.DEV_HOST }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to DEV server via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEV_HOST }}
+          username: ${{ secrets.DEV_USER }}
+          key: ${{ secrets.DEV_SSH_KEY }}
+          script: |
+            export GITHUB_REPOSITORY_OWNER=${{ github.repository_owner }}
+            export IMAGE_TAG=develop
+            export SPRING_PROFILE=dev
+
+            echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+            docker compose -f docker-compose.github.yml pull
+            docker compose -f docker-compose.github.yml up -d
+
+            echo "⏳ Cekam backend..."
+            sleep 20
+
+            curl --fail http://localhost:8080/actuator/health || exit 1
+            echo "✅ DEV deploy uspesen!"

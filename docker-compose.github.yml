@@ -1,0 +1,31 @@
+networks:
+  app-net:
+    driver: bridge
+
+services:
+
+  backend:
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER}/notesapp-backend:${IMAGE_TAG:-latest}
+    container_name: notesapp-backend
+    environment:
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILE:-dev}
+    ports:
+      - "8080:8080"
+    networks:
+      - app-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  frontend:
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER}/notesapp-frontend:${IMAGE_TAG:-latest}
+    container_name: notesapp-frontend
+    ports:
+      - "3001:80"
+    networks:
+      - app-net
+    depends_on:
+      - backend
