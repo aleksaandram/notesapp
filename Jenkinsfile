@@ -193,16 +193,16 @@ pipeline {
      }
 
         stage('Switch Traffic to Green') {
-             steps {
-                 echo 'Switching traffic to GREEN...'
-                 sh '''
-                     echo "Switching Nginx config to GREEN..."
-                     docker exec nginx_proxy sh -lc "cp /etc/nginx/nginx-green.conf /etc/nginx/conf.d/default.conf"
-                     docker exec nginx_proxy nginx -t
-                     docker exec nginx_proxy nginx -s reload
-                 '''
-             }
-         }
+            steps {
+                sh '''
+                    echo "Switching Nginx config to GREEN..."
+                    docker start nginx_proxy || true
+                    docker exec nginx_proxy sh -lc "cp /etc/nginx/nginx-green.conf /etc/nginx/conf.d/default.conf"
+                    docker exec nginx_proxy nginx -t
+                    docker exec nginx_proxy nginx -s reload
+                '''
+            }
+        }
 
 
         }
@@ -215,13 +215,14 @@ pipeline {
                success {
                    echo 'Blue-Green deployment completed successfully!'
                }
-               failure {
-                             echo 'Something failed. Check the logs.'
-                             sh '''
-                               echo "ROLLBACK -> switching Nginx back to BLUE"
-                               docker exec nginx_proxy sh -lc "cp /etc/nginx/nginx-blue.conf /etc/nginx/conf.d/default.conf" || true
-                               docker exec nginx_proxy nginx -s reload || true
-                             '''
-                           }
+              failure {
+                  echo 'Something failed. Check the logs.'
+                  sh '''
+                      echo "ROLLBACK -> switching traffic back to BLUE"
+                      docker start nginx_proxy || true
+                      docker exec nginx_proxy sh -lc "cp /etc/nginx/nginx-blue.conf /etc/nginx/conf.d/default.conf" || true
+                      docker exec nginx_proxy nginx -s reload || true
+                  '''
+              }
            }
        }
