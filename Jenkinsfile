@@ -144,7 +144,7 @@ pipeline {
                    sh """
                        docker pull localhost:8082/docker-hosted/notesapp:latest
                        docker-compose up -d --force-recreate --no-deps app-green
-                       echo "Waiting for GREEN to start..."
+                       echo "Waiting for GREEN to start.."
                        sleep 60
                    """
                }
