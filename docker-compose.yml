@@ -1,35 +1,8 @@
+networks:
+  app-net:
+    driver: bridge
+
 services:
-  app_blue:
-    image: host.docker.internal:8084/notesapp:latest
-    container_name: app_blue
-    environment:
-      - COLOR=BLUE
-    ports:
-      - "8085:8080"
-    networks:
-      - app-net
-
-  app_green:
-    image: host.docker.internal:8084/notesapp:latest
-    container_name: app_green
-    environment:
-      - COLOR=GREEN
-    ports:
-       - "8086:8080"
-    networks:
-      - app-net
-
-  nginx:
-    build: ./nginx
-    image: nginx:alpine
-    container_name: nginx_proxy
-    ports:
-      - "80:80"
-    depends_on:
-      - app_blue
-      - app_green
-    networks:
-      - app-net
 
   frontend:
     build: ./notesapp-frontend
@@ -55,6 +28,7 @@ services:
   jenkins:
     build: ./jenkins
     container_name: jenkins
+    privileged: true
     ports:
       - "8090:8080"
       - "50000:50000"
@@ -73,8 +47,8 @@ services:
     image: sonatype/nexus3:latest
     container_name: nexus
     ports:
-      - "8083:8081"
-      - "8084:8082"
+      - "8081:8081"
+      - "8082:8082"
     volumes:
       - nexus-data:/nexus-data
     networks:
@@ -85,6 +59,3 @@ volumes:
   jenkins-data:
   nexus-data:
 
-networks:
-  app-net:
-    driver: bridge

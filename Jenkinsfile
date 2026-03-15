@@ -130,89 +130,20 @@ pipeline {
         }
 
 
-
-       stage('Deploy Green') {
-           steps {
-               echo 'Deploying to GREEN environment...'
-               withCredentials([usernamePassword(
-                   credentialsId: 'nexus-docker',
-                   usernameVariable: 'NEXUS_USER',
-                   passwordVariable: 'NEXUS_PASS'
-               )]) {
-                   sh """
-                       echo \$NEXUS_PASS | docker login ${DOCKER_REGISTRY} -u \$NEXUS_USER --password-stdin
-                       docker pull ${DOCKER_REGISTRY}/${APP_NAME}:latest
-                       docker rm -f app_green || true
-                       docker run -d --name app_green \
-                           --network notesapp_app-net \
-                           -e COLOR=GREEN \
-                           -p 8086:8080 \
-                           ${DOCKER_REGISTRY}/${APP_NAME}:latest
-                       echo "Waiting for GREEN to start..."
-                       sleep 30
-                   """
-               }
-           }
-       }
-
-
-     stage('Smoke Test Green') {
-         steps {
-             sh '''
-                 echo "Smoke testing GREEN..."
-                 GREEN_IP=$(docker inspect app_green --format "{{.NetworkSettings.Networks.notesapp_app-net.IPAddress}}")
-                 echo "GREEN IP: $GREEN_IP"
-                 for i in $(seq 1 20); do
-                     STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://${GREEN_IP}:8080/api/notes)
-                     echo "Attempt $i - Status: $STATUS"
-                     if [ "$STATUS" = "200" ] || [ "$STATUS" = "204" ]; then
-                         echo "GREEN is healthy!"
-                         exit 0
-                     fi
-                     sleep 5
-                 done
-                 echo "GREEN failed!"
-                 exit 1
-             '''
-         }
-     }
-
-        stage('Switch Traffic to Green') {
-             steps {
-                 echo 'Switching traffic to GREEN...'
-                 sh '''
-                     docker exec nginx_proxy sh -c "echo 'upstream app { server app_green:8080; } server { listen 80; location / { proxy_pass http://app; } }' > /etc/nginx/conf.d/default.conf"
-                     docker exec nginx_proxy nginx -s reload
-                     echo "Traffic switched to GREEN!"
-                 '''
-             }
-         }
-
-        stage('Cleanup Blue') {
-                   steps {
-                       echo 'Updating BLUE...'
-                       sh '''
-                           docker rm -f app_blue || true
-                           docker run -d --name app_blue \
-                               --network notesapp_app-net \
-                               -e COLOR=BLUE \
-                               -p 8085:8080 \
-                               ${DOCKER_REGISTRY}/${APP_NAME}:latest
-                       '''
-                   }
-               }
-           }
-
            post {
+            always {
+                      echo 'Pipeline finished.'
+             }
                success {
                    echo 'Blue-Green deployment completed successfully!'
                }
                failure {
-                   echo 'Rolling back to BLUE...'
-                   sh '''
-                       docker exec nginx_proxy sh -c "echo 'upstream app { server app_blue:8080; } server { listen 80; location / { proxy_pass http://app; } }' > /etc/nginx/conf.d/default.conf"
-                       docker exec nginx_proxy nginx -s reload || true
-                   '''
-               }
+                             echo 'Something failed. Check the logs.'
+                             sh '''
+                               echo "ROLLBACK -> switching Nginx back to BLUE"
+                               docker exec nginx_proxy sh -lc "cp /etc/nginx/nginx-blue.conf /etc/nginx/conf.d/default.conf" || true
+                               docker exec nginx_proxy nginx -s reload || true
+                             '''
+                           }
            }
        }
