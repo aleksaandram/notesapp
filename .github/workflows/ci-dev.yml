@@ -154,7 +154,6 @@ jobs:
 
     environment:
       name: dev
-      url: http://${{ secrets.DEV_HOST }}
 
     steps:
       - name: Checkout code
