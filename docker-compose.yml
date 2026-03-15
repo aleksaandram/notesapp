@@ -54,6 +54,31 @@ services:
     networks:
       - app-net
 
+  app-blue:
+    image: localhost:8082/docker-hosted/notesapp:latest
+    container_name: app_blue
+    ports:
+      - "8083:8080"
+    networks:
+      - app-net
+
+  app-green:
+    image: localhost:8082/docker-hosted/notesapp:latest
+    container_name: app_green
+    ports:
+      - "8084:8080"
+    networks:
+      - app-net
+
+  nginx:
+    build: ./nginx
+    container_name: nginx_proxy
+    ports:
+      - "80:80"
+    networks:
+      - app-net
+
+
 volumes:
   gitea-data:
   jenkins-data:
