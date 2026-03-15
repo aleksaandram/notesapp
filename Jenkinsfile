@@ -196,7 +196,6 @@ pipeline {
             steps {
                 sh '''
                     echo "Switching Nginx config to GREEN..."
-                    docker start nginx_proxy || true
                     docker exec nginx_proxy sh -lc "cp /etc/nginx/nginx-green.conf /etc/nginx/conf.d/default.conf"
                     docker exec nginx_proxy nginx -t
                     docker exec nginx_proxy nginx -s reload
