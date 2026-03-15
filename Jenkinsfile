@@ -184,7 +184,7 @@ pipeline {
                      exit 0
                    fi
                    echo "Waiting for GREEN... ($i/30)"
-                   sleep 2
+                   sleep 10
                  done
                  echo "GREEN failed health check!"
                  exit 1
