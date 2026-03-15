@@ -156,26 +156,26 @@ pipeline {
        }
 
 
-      stage('Smoke Test Green') {
-          steps {
-              sh '''
-                  echo "Smoke testing GREEN..."
-                  GREEN_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' app_green)
-                  echo "GREEN IP: $GREEN_IP"
-                  for i in $(seq 1 20); do
-                      STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://${GREEN_IP}:8080/api/notes)
-                      echo "Attempt $i - Status: $STATUS"
-                      if [ "$STATUS" = "200" ] || [ "$STATUS" = "204" ]; then
-                          echo "GREEN is healthy!"
-                          exit 0
-                      fi
-                      sleep 5
-                  done
-                  echo "GREEN failed!"
-                  exit 1
-              '''
-          }
-      }
+     stage('Smoke Test Green') {
+         steps {
+             sh '''
+                 echo "Smoke testing GREEN..."
+                 GREEN_IP=$(docker inspect app_green --format "{{.NetworkSettings.Networks.notesapp_app-net.IPAddress}}")
+                 echo "GREEN IP: $GREEN_IP"
+                 for i in $(seq 1 20); do
+                     STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://${GREEN_IP}:8080/api/notes)
+                     echo "Attempt $i - Status: $STATUS"
+                     if [ "$STATUS" = "200" ] || [ "$STATUS" = "204" ]; then
+                         echo "GREEN is healthy!"
+                         exit 0
+                     fi
+                     sleep 5
+                 done
+                 echo "GREEN failed!"
+                 exit 1
+             '''
+         }
+     }
 
         stage('Switch Traffic to Green') {
              steps {
