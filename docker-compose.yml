@@ -57,6 +57,8 @@ services:
   app-blue:
     image: localhost:8082/docker-hosted/notesapp:latest
     container_name: app_blue
+    environment:
+      - COLOR=BLUE
     ports:
       - "8083:8080"
     networks:
@@ -65,6 +67,8 @@ services:
   app-green:
     image: localhost:8082/docker-hosted/notesapp:latest
     container_name: app_green
+    environment:
+      - COLOR=GREEN
     ports:
       - "8084:8080"
     networks:

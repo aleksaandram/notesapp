@@ -12,7 +12,8 @@ public class HomeController {
 
     @GetMapping("/")
     public String home(){
-        return "Backend is running";
+        String color = System.getenv().getOrDefault("COLOR","UNKNOWN");
+        return "Backend is running from "+color+" environment";
     }
 
 }
