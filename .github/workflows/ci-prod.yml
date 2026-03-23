@@ -25,7 +25,7 @@ jobs:
   # JOB 1: Build + Test Backend
   # ─────────────────────────────────────────────────────────────────────────────
   build-test-backend:
-    name: 🔨 Build & Test Backend
+    name: Build & Test Backend
     runs-on: ubuntu-latest
 
     steps:
@@ -50,7 +50,7 @@ jobs:
   # JOB 2: Build + Test Frontend
   # ─────────────────────────────────────────────────────────────────────────────
   build-test-frontend:
-    name: 🎨 Build & Test Frontend
+    name: Build & Test Frontend
     runs-on: ubuntu-latest
 
     steps:
@@ -149,7 +149,7 @@ jobs:
   # JOB 4: Deploy na prod
   # ─────────────────────────────────────────────────────────────────────────────
   deploy-dev:
-    name: 🚀 Deploy to DEV
+    name: Deploy to DEV
     runs-on: self-hosted
     needs: push-images
 
