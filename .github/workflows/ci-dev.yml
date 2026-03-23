@@ -180,4 +180,4 @@ jobs:
       - name: Health check
         run: |
           Start-Sleep -Seconds 20
-          curl http://localhost:8080/actuator/health
+          curl.exe -f http://localhost:8080/
