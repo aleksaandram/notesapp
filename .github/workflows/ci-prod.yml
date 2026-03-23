@@ -149,12 +149,12 @@ jobs:
   # JOB 4: Deploy na prod
   # ─────────────────────────────────────────────────────────────────────────────
   deploy-dev:
-    name: Deploy to DEV
+    name: Deploy to PROD
     runs-on: self-hosted
     needs: push-images
 
     environment:
-      name: dev
+      name: prod
 
     steps:
       - name: Checkout code
@@ -163,9 +163,9 @@ jobs:
       - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_TOKEN }}
+            registry: ghcr.io
+            username: ${{ github.actor }}
+            password: ${{ secrets.GHCR_TOKEN }}
 
       - name: Pull latest images
         run: |
