@@ -22,7 +22,7 @@ public class NoteControllerIntegrationTest {
     @Test
     public void testGetAllNotes() {
         ResponseEntity<String> response = restTemplate
-                .getForEntity("http://localhost:" + port + "/notes", String.class);
+                .getForEntity("http://localhost:" + port + "/api/notes", String.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 
@@ -30,7 +30,7 @@ public class NoteControllerIntegrationTest {
     public void testCreateNote() {
         String note = "{\"title\":\"Test\",\"content\":\"Integration test note\"}";
         ResponseEntity<String> response = restTemplate
-                .postForEntity("http://localhost:" + port + "/notes", note, String.class);
+                .postForEntity("http://localhost:" + port + "/api/notes", note, String.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 }
