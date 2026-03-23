@@ -41,7 +41,6 @@ jobs:
 
       - name: Run Maven tests
         run: mvn clean test -B
-        continue-on-error: true
 
       - name: Build JAR
         run: mvn package -DskipTests -B
