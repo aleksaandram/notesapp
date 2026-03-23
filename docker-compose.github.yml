@@ -14,7 +14,7 @@ services:
     networks:
       - app-net
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/actuator/health || exit 1"]
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/ || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
