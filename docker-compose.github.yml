@@ -9,6 +9,7 @@ services:
     container_name: notesapp-backend
     environment:
       - SPRING_PROFILES_ACTIVE=${SPRING_PROFILE:-dev}
+      - COLOR=${COLOR:-BLUE}
     ports:
       - "8080:8080"
     networks:

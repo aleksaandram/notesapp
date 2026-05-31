@@ -49,7 +49,7 @@ jobs:
   # JOB 2: Build + Test Frontend
   # ─────────────────────────────────────────────────────────────────────────────
   build-test-frontend:
-    name: 🎨 Build & Test Frontend
+    name: Build & Test Frontend
     runs-on: ubuntu-latest
 
     steps:
@@ -147,13 +147,13 @@ jobs:
   # ─────────────────────────────────────────────────────────────────────────────
   # JOB 4: Deploy na prod
   # ─────────────────────────────────────────────────────────────────────────────
-  deploy-dev:
-    name: Deploy to DEV
+  deploy-prod:
+    name: Deploy to PROD
     runs-on: self-hosted
     needs: push-images
 
     environment:
-      name: dev
+      name: prod
 
     steps:
       - name: Checkout code
@@ -168,14 +168,15 @@ jobs:
 
       - name: Pull latest images
         run: |
-          docker pull ghcr.io/${{ github.repository_owner }}/notesapp-backend:develop
-          docker pull ghcr.io/${{ github.repository_owner }}/notesapp-frontend:develop
+          docker pull ghcr.io/${{ github.repository_owner }}/notesapp-backend:latest
+          docker pull ghcr.io/${{ github.repository_owner }}/notesapp-frontend:latest
 
       - name: Deploy with docker compose
         run: |
           $env:GITHUB_REPOSITORY_OWNER = "${{ github.repository_owner }}"
           $env:IMAGE_TAG = "latest"
-          $env:SPRING_PROFILE = "dev"
+          $env:SPRING_PROFILE = "prod"
+          $env:COLOR = "GREEN"
           docker compose -f docker-compose.github.yml up -d --force-recreate
 
       - name: Health check

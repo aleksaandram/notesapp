@@ -176,6 +176,7 @@ jobs:
           $env:GITHUB_REPOSITORY_OWNER = "${{ github.repository_owner }}"
           $env:IMAGE_TAG = "develop"
           $env:SPRING_PROFILE = "dev"
+          $env:COLOR = "BLUE"
           docker compose -f docker-compose.github.yml up -d --force-recreate
 
       - name: Health check
